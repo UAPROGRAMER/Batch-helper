@@ -20,8 +20,11 @@ is_echo_off = False
 set_int_check = False
 set_input_check = False
 
+funcs = ["set","if","goto","cls","setlocal","endlocal","for","echo","@echo off","do","pathping","start","in"]
+operators = ['+','-','*','/','=','>','<','|',":","(",")",'[',']','{','}']
+
 #defining functions for commands
-def cmdNew(event):     #file menu New option
+def cmdNew(event=None):     #file menu New option
     global fileName
     if len(notepad.get('1.0', END+'-1c'))>0:
         if messagebox.askyesno("Notepad", "Do you want to save changes?"):
@@ -29,13 +32,13 @@ def cmdNew(event):     #file menu New option
         else:
             notepad.delete(0.0, END)
     root.title("Notepad")
-def cmdOpen(event):     #file menu Open option
+def cmdOpen(event=None):     #file menu Open option
     fd = filedialog.askopenfile(parent = root, mode = 'r')
     t = fd.read()     #t is the text read through filedialog
     notepad.delete(0.0, END)
     notepad.insert(0.0, t)
     
-def cmdSave(event):     #file menu Save option
+def cmdSave(event=None):     #file menu Save option
     fd = filedialog.asksaveasfile(mode = 'w', defaultextension = '.bat')
     if fd!= None:
         data = notepad.get('1.0', END)
@@ -44,7 +47,7 @@ def cmdSave(event):     #file menu Save option
     except:
         messagebox.showerror(title="Error", message = "Not able to save file!")
      
-def cmdSaveAs(event):     #file menu Save As option
+def cmdSaveAs(event=None):     #file menu Save As option
     fd = filedialog.asksaveasfile(mode='w', defaultextension = '.bat')
     t = notepad.get(0.0, END)     #t stands for the text gotten from notepad
     try:
@@ -78,7 +81,7 @@ def cmdFind():     #edit menu Find option
         idx = lastidx
     notepad.tag_config('Found', foreground = 'white', background = 'blue')
     notepad.bind("<1>", click)
-def click(event):     #handling click event
+def click(event=None):     #handling click event
     notepad.tag_config('Found',background='white',foreground='black')
 def cmdSelectAll():     #edit menu Select All option
     notepad.event_generate("<<SelectAll>>")
@@ -149,7 +152,7 @@ def cmd_batch_input_checkbox():
     global set_input_check
     set_input_check = not set_input_check
 
-def on_enter_press(event):
+def on_enter_press(event=None):
     if event.keysym == "Return":
         return "break"
 
@@ -183,7 +186,7 @@ def cmd_batch_if():
     if_text.delete(1.0, "end-1c")
     if_text_v.delete(1.0, "end-1c")
 
-def cmd_batch_timer():
+def cmd_batch_timer(event=None):
     new_text = "pathping -h 1 -p 25564 -q 1 -w " + timer_text.get(1.0, "end-1c") + " 127.0.0.1>nul\n"
     cursor_position = notepad.index(INSERT)
     notepad.insert(cursor_position, new_text)
@@ -276,17 +279,17 @@ timer_text.bind("<KeyPress>", on_enter_press)
 
 #key binds
 
-def on_alt_c(event):
+def on_alt_c(event=None):
     new_text = "start "
     cursor_position = notepad.index(INSERT)
     notepad.insert(cursor_position, new_text)
 
-def on_alt_w(event):
+def on_alt_w(event=None):
     new_text = "for /l %%x in (1, 1, 10) do (\n  \n  )\n"
     cursor_position = notepad.index(INSERT)
     notepad.insert(cursor_position, new_text)
 
-def on_alt_d(event):
+def on_alt_d(event=None):
     new_text = "goto "
     cursor_position = notepad.index(INSERT)
     notepad.insert(cursor_position, new_text)
@@ -340,4 +343,118 @@ notepadMenu.add_cascade(label='Help', menu = helpMenu)
 helpMenu.add_command(label='About Program', command = cmdAbout)
 
 notepad.grid(row=0, rowspan=99, column=0, sticky="ew")
+
+def highlight():
+
+    notepad.tag_remove("func", '1.0', END)
+    for func in funcs:
+        start = "1.0"
+        while True:
+            start = notepad.search(func, start, stopindex=END, regexp=True)
+            if not start:
+                break
+            endt = start + "+" + str(len(func)) + 'c'
+
+            notepad.tag_add("func", start, endt)
+            notepad.tag_config("func", foreground="#AF00A3")
+
+            start = endt
+    
+    start = '1.0'
+    notepad.tag_remove("str", '1.0', END)
+    while True:
+        # Знаходимо наступне входження %
+        start = notepad.search('"', start, stopindex=END, regexp=True)
+        if not start:
+            break
+
+        # Отримуємо кінець рядка, що містить %, та наступний символ %
+        endt = notepad.search('"', start + "+1c", stopindex=END, regexp=True)
+        if not endt:
+            endt = END
+        else:
+            endt = endt + "+1c"
+
+        # Встановлюємо стиль для тексту між % символами
+        if endt != END:
+            if int(start[2:])+1 == int(endt[2:-3]):
+                endt = endt[:-3] + "+2c"
+        notepad.tag_add("str", start, endt)
+        notepad.tag_config("str", foreground="#00BD13")
+
+        # Переміщуємось до наступного символу %
+        if endt == END:
+            break
+        start = endt
+    start = '1.0'
+    while True:
+        # Знаходимо наступне входження %
+        start = notepad.search("'", start, stopindex=END, regexp=True)
+        if not start:
+            break
+
+        # Отримуємо кінець рядка, що містить %, та наступний символ %
+        endt = notepad.search("'", start + "+1c", stopindex=END, regexp=True)
+        if not endt:
+            endt = END
+        else:
+            endt = endt + "+1c"
+
+        # Встановлюємо стиль для тексту між % символами
+        if endt != END:
+            if int(start[2:])+1 == int(endt[2:-3]):
+                endt = endt[:-3] + "+2c"
+        notepad.tag_add("str", start, endt)
+        notepad.tag_config("str", foreground="#00BD13")
+
+        # Переміщуємось до наступного символу %
+        if endt == END:
+            break
+        start = endt
+    
+    notepad.tag_remove("oper", '1.0', END)
+    for oper in operators:
+        start = "1.0"
+        while True:
+            start = notepad.search(oper, start, stopindex=END, regexp=False)
+            if not start:
+                break
+            endt = start + "+1c"
+
+            notepad.tag_add("oper", start, endt)
+            notepad.tag_config("oper", foreground="#F30000")
+
+            start = endt
+
+    start = '1.0'
+    notepad.tag_remove("var", '1.0', END)
+    while True:
+        # Знаходимо наступне входження %
+        start = notepad.search('%', start, stopindex=END, regexp=True)
+        if not start:
+            break
+
+        # Отримуємо кінець рядка, що містить %, та наступний символ %
+        endt = notepad.search('%', start + "+1c", stopindex=END, regexp=True)
+        if not endt:
+            endt = END
+        else:
+            endt = endt + "+1c"
+
+        # Встановлюємо стиль для тексту між % символами
+        if endt != END:
+            if int(start[2:])+1 == int(endt[2:-3]):
+                endt = endt[:-3] + "+2c"
+        notepad.tag_add("var", start, endt)
+        notepad.tag_config("var", foreground="#FF7700")
+
+        # Переміщуємось до наступного символу %
+        if endt == END:
+            break
+        start = endt
+
+    root.after(300, highlight)
+
+highlight()
+
 root.mainloop()
